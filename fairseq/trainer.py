@@ -44,7 +44,8 @@ class Trainer(object):
     """
 
     def __init__(self, cfg: FairseqConfig, task, model, criterion, quantizer=None):
-
+        self.correct_examples = []
+        self.incorrect_examples = []
         if isinstance(cfg, Namespace):
             logger.warning(
                 "argparse.Namespace configuration is deprecated! Automatically converting to OmegaConf"
@@ -1173,6 +1174,17 @@ class Trainer(object):
                     sample_size.zero_()
                 else:
                     sample_size *= 0.0
+
+        predictions = logging_output['preds']
+        targets = sample['target']
+        correct = predictions.eq(targets)
+        incorrect = ~correct
+
+        # Collect examples
+        correct_examples = sample['net_input']['src_tokens'][correct]
+        incorrect_examples = sample['net_input']['src_tokens'][incorrect]
+        self.correct_examples.extend(correct_examples)
+        self.incorrect_examples.extend(incorrect_examples)
 
         # gather logging outputs from all replicas
         if self.data_parallel_world_size > 1:
