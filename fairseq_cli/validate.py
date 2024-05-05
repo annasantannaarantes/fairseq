@@ -113,27 +113,35 @@ def main(cfg: DictConfig, override_args=None):
             prefix=f"valid on '{subset}' subset",
             default_log_format=("tqdm" if not cfg.common.no_progress_bar else "simple"),
         )
+        print("HELLO")
+        correct_examples = []
+        incorrect_examples = []
 
-        log_outputs = []
         for i, sample in enumerate(progress):
             sample = utils.move_to_cuda(sample) if use_cuda else sample
             _loss, _sample_size, log_output = task.valid_step(sample, model, criterion)
+
+            predictions = log_output['preds']
+            targets = sample['target']
+            correct = predictions.eq(targets.view_as(predictions))
+            incorrect = ~correct
+
+            for idx, correct_flag in enumerate(correct):
+                if correct_flag:
+                    correct_examples.append((sample['input'][idx], targets[idx]))
+                else:
+                    incorrect_examples.append((sample['input'][idx], targets[idx]))
+
             progress.log(log_output, step=i)
-            log_outputs.append(log_output)
 
-        if data_parallel_world_size > 1:
-            log_outputs = distributed_utils.all_gather_list(
-                log_outputs,
-                max_size=cfg.common.all_gather_list_size,
-                group=distributed_utils.get_data_parallel_group(),
-            )
-            log_outputs = list(chain.from_iterable(log_outputs))
+        # Log or save the correct and incorrect examples
+        print(f"Correct examples from validation on '{subset}':")
+        for input, target in correct_examples[:10]:  # print only first 10 for brevity
+            print(f"Input: {input}, Target: {target}")
 
-        with metrics.aggregate() as agg:
-            task.reduce_metrics(log_outputs, criterion)
-            log_output = agg.get_smoothed_values()
-
-        progress.print(log_output, tag=subset, step=i)
+        print(f"Incorrect examples from validation on '{subset}':")
+        for input, target in incorrect_examples[:10]:  # print only first 10 for brevity
+            print(f"Input: {input}, Target: {target}")
 
 
 def cli_main():
