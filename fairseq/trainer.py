@@ -1150,9 +1150,24 @@ class Trainer(object):
             sample, is_dummy_batch = self._prepare_sample(sample)
 
             try:
-                _loss, sample_size, logging_output = self.task.valid_step(
-                    sample, self.model, self.criterion, **extra_kwargs
+                outputs = self.model(sample['net_input']['src_tokens'])
+                predictions = torch.argmax(outputs, dim=1)
+                correct_indices = predictions == sample['target']
+                incorrect_indices = ~correct_indices
+    
+                # Collect correct and incorrect examples
+                self.correct_examples.extend(sample['net_input']['src_tokens'][correct_indices])
+                self.incorrect_examples.extend(sample['net_input']['src_tokens'][incorrect_indices])
+    
+                # Optionally save correct and incorrect examples to disk
+                torch.save(self.correct_examples, 'correct_examples.pt')
+                torch.save(self.incorrect_examples, 'incorrect_examples.pt')
+    
+                # Perform the actual validation step
+                loss, sample_size, logging_output = self.task.valid_step(
+                    sample, self.model, self.criterion
                 )
+    
             except RuntimeError as e:
                 if "out of memory" in str(e):
                     self._log_oom(e)
@@ -1167,38 +1182,25 @@ class Trainer(object):
                             torch.cuda.empty_cache()
                         return self.valid_step(sample, raise_oom=True)
                 raise e
-
+    
             logging_outputs = [logging_output]
             if is_dummy_batch:
                 if torch.is_tensor(sample_size):
                     sample_size.zero_()
                 else:
                     sample_size *= 0.0
-
-        predictions = logging_output['preds']
-        targets = sample['target']
-        correct = predictions.eq(targets)
-        incorrect = ~correct
-
-        # Collect examples
-        correct_examples = sample['net_input']['src_tokens'][correct]
-        incorrect_examples = sample['net_input']['src_tokens'][incorrect]
-        self.correct_examples.extend(correct_examples)
-        self.incorrect_examples.extend(incorrect_examples)
-
-        # gather logging outputs from all replicas
+    
+        # Gather logging outputs from all replicas
         if self.data_parallel_world_size > 1:
             logging_outputs, (sample_size,) = self._aggregate_logging_outputs(
-                logging_outputs,
-                sample_size,
-                ignore=is_dummy_batch,
+                logging_outputs, sample_size, ignore=is_dummy_batch
             )
-
-        # log validation stats
+    
+        # Log validation stats
         if self.tpu:
             logging_outputs = self._xla_markstep_and_send_to_cpu(logging_outputs)
         logging_output = self._reduce_and_log_stats(logging_outputs, sample_size)
-
+    
         return logging_output
 
     def zero_grad(self):
