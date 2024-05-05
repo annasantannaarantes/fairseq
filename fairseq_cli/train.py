@@ -40,6 +40,8 @@ from fairseq.logging import meters, metrics, progress_bar
 from fairseq.model_parallel.megatron_trainer import MegatronTrainer
 from fairseq.trainer import Trainer
 
+# Import for tensor manipulation
+import torch.nn.functional as F
 
 def main(cfg: FairseqConfig) -> None:
     if isinstance(cfg, argparse.Namespace):
@@ -579,3 +581,4 @@ def cli_main(
 
 if __name__ == "__main__":
     cli_main()
+
