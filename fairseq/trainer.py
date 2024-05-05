@@ -497,6 +497,10 @@ class Trainer(object):
                     filename, load_on_all_ranks=load_on_all_ranks
                 )
                 last_optim_state = state.get("last_optimizer_state", None)
+                correct_examples = state.get('extra_state', {}).get('correct_examples', [])
+                incorrect_examples = state.get('extra_state', {}).get('incorrect_examples', [])
+                self.correct_examples.extend(correct_examples)
+                self.incorrect_examples.extend(incorrect_examples)
 
                 # If doing zero_sharding, do not broadcast global optimizer
                 # state. Later we will broadcast sharded states to each rank
@@ -685,6 +689,7 @@ class Trainer(object):
                     filename, epoch, self.get_num_updates()
                 )
             )
+            logger.info(f"Loaded {len(correct_examples)} correct examples and {len(incorrect_examples)} incorrect examples.")
 
         else:
             logger.info("No existing checkpoint found {}".format(filename))
