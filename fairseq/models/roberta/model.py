@@ -256,6 +256,8 @@ class RobertaModel(FairseqEncoderModel):
 
         if classification_head_name is not None:
             x = self.classification_heads[classification_head_name](x)
+
+        print(x)
         return x, extra
 
     def _get_adaptive_head_loss(self):
