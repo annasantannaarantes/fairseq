@@ -219,7 +219,7 @@ def main(cfg: FairseqConfig) -> None:
             disable_iterator_cache=task.has_sharded_data("train"),
         )
     train_meter.stop()
-    logger.info("done training in {:.1f} seconds".format(train_meter.sum))
+    logger.info("train! - done training in {:.1f} seconds".format(train_meter.sum))
 
     # ioPath implementation to wait for all asynchronous file writes to complete.
     if cfg.checkpoint.write_checkpoints_asynchronously:
