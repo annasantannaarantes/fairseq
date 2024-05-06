@@ -59,7 +59,7 @@ def main(cfg: DictConfig, override_args=None):
         overrides = None
 
     # Load ensemble
-    logger.info("loading model(s) from {}".format(cfg.common_eval.path))
+    logger.info("validate - loading model(s) from {}".format(cfg.common_eval.path))
     models, saved_cfg, task = checkpoint_utils.load_model_ensemble_and_task(
         [cfg.common_eval.path],
         arg_overrides=overrides,
