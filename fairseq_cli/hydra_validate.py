@@ -133,7 +133,7 @@ def validate(cfg):
             itr,
             log_format=cfg.common.log_format,
             log_interval=cfg.common.log_interval,
-            prefix=f"valid on '{subset}' subset",
+            prefix=f"valid on '{subset}' subset - hydra_validate",
             default_log_format=("tqdm" if not cfg.common.no_progress_bar else "simple"),
         )
 
